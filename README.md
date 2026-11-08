@@ -105,7 +105,7 @@ you to allow installation from an unknown source, because the app is not
 distributed through Google Play.
 
 ```bash
-adb install -r app-arm64-v8a-release.apk
+adb install -r kecilin-1.0.0-arm64-v8a.apk
 ```
 
 > **Never install a debug APK.** Debug builds carry the `INTERNET` permission

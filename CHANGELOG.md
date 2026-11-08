@@ -18,6 +18,9 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Release APKs are now named `kecilin-<version>-<abi>.apk` (for example
+  `kecilin-1.0.0-arm64-v8a.apk`) by the Gradle build; `release.yml` attaches
+  those files from `build/app/outputs/apk/release/`.
 - `tool/test_fixtures.sh` now generates its fixtures; it no longer reads any file
   from outside the repository.
 - `docs/releasing.md`: the automated release path is now the default and the manual

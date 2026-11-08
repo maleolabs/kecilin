@@ -200,15 +200,19 @@ flutter build apk --release --split-per-abi
 Output:
 
 ```
-build/app/outputs/flutter-apk/app-arm64-v8a-release.apk      ~21 MB
-build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk    ~19 MB
-build/app/outputs/flutter-apk/app-x86_64-release.apk         ~23 MB
+build/app/outputs/apk/release/kecilin-1.0.0-arm64-v8a.apk      ~21 MB
+build/app/outputs/apk/release/kecilin-1.0.0-armeabi-v7a.apk    ~19 MB
+build/app/outputs/apk/release/kecilin-1.0.0-x86_64.apk         ~23 MB
 ```
+
+The Flutter tool also copies default-named APKs into
+`build/app/outputs/flutter-apk/` (`app-<abi>-release.apk`); those copies are
+duplicates, and `release.yml` consumes the Gradle output directory instead.
 
 Install the arm64 build on a modern phone:
 
 ```bash
-adb install -r build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+adb install -r build/app/outputs/apk/release/kecilin-1.0.0-arm64-v8a.apk
 ```
 
 A fat APK (all ABIs, ~55 MB) is also possible via `flutter build apk --release`,

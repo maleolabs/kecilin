@@ -79,7 +79,7 @@ Rules that are not negotiable:
 4. After approval the job restores the keystore, builds
    `flutter build apk --release --split-per-abi`, verifies the artifacts, and
    creates a **draft** GitHub release with exactly three assets:
-   `app-arm64-v8a-release.apk`, `app-armeabi-v7a-release.apk`, and
+   `kecilin-1.0.0-arm64-v8a.apk`, `kecilin-1.0.0-armeabi-v7a.apk`, and
    `SHA256SUMS.txt`.
 5. A maintainer opens the draft, checks it, and publishes it.
 
@@ -207,13 +207,13 @@ Then verify the artifacts before publishing:
 
 ```bash
 # Signed with the release key, not the debug key
-apksigner verify --print-certs build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+apksigner verify --print-certs build/app/outputs/apk/release/kecilin-1.0.0-arm64-v8a.apk
 
 # The offline guarantee: this must print no INTERNET permission
-aapt2 dump permissions build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+aapt2 dump permissions build/app/outputs/apk/release/kecilin-1.0.0-arm64-v8a.apk
 
 # Size sanity check against the previous release
-ls -l build/app/outputs/flutter-apk/*.apk build/app/outputs/bundle/release/*.aab
+ls -l build/app/outputs/apk/release/*.apk build/app/outputs/bundle/release/*.aab
 ```
 
 If `aapt2 dump permissions` shows `android.permission.INTERNET`, **stop**. The
@@ -227,7 +227,7 @@ If `apksigner` is not on `PATH`, use the copy in
 ## 5. Install a release build on a device
 
 ```bash
-adb install -r build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+adb install -r build/app/outputs/apk/release/kecilin-1.0.0-arm64-v8a.apk
 ```
 
 Then, by hand:
@@ -249,8 +249,8 @@ R8 regressions only appear at runtime, so this step is not optional.
 1. Open the draft created by the workflow.
 2. Check the version in the title and body against `pubspec.yaml` and
    `CHANGELOG.md`.
-3. Check the asset list: `app-arm64-v8a-release.apk`,
-   `app-armeabi-v7a-release.apk`, `SHA256SUMS.txt`. Nothing else.
+3. Check the asset list: `kecilin-1.0.0-arm64-v8a.apk`,
+   `kecilin-1.0.0-armeabi-v7a.apk`, `SHA256SUMS.txt`. Nothing else.
 4. Install the arm64 APK on a device and run the checks in section 5.
 5. Publish. Users can verify a download with `sha256sum -c SHA256SUMS.txt`.
 
@@ -267,7 +267,7 @@ R8 regressions only appear at runtime, so this step is not optional.
 
 **Direct distribution (sideload, manual path)**
 
-Ship `app-arm64-v8a-release.apk`; it covers essentially every phone released in
+Ship `kecilin-1.0.0-arm64-v8a.apk`; it covers essentially every phone released in
 the last several years. Include `armeabi-v7a` only for older 32-bit devices, and
 never `x86_64` — that one is for emulators.
 

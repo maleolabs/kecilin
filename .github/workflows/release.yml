@@ -171,6 +171,10 @@ jobs:
 
           echo "Release keystore restored ($(stat -c %s android/keystore/release.jks) bytes)."
 
+      # The APKs are named kecilin-<version>-<abi>.apk by
+      # android/app/build.gradle.kts and land in build/app/outputs/apk/release/.
+      # The Flutter tool also copies default-named APKs into
+      # build/app/outputs/flutter-apk/; that directory is ignored on purpose.
       - name: Build release APKs
         run: flutter build apk --release --split-per-abi
 
@@ -229,8 +233,8 @@ jobs:
             exit 1
           fi
 
-          for apk in app-arm64-v8a-release.apk app-armeabi-v7a-release.apk; do
-            path="build/app/outputs/flutter-apk/$apk"
+          for apk in "kecilin-${RELEASE_VERSION}-arm64-v8a.apk" "kecilin-${RELEASE_VERSION}-armeabi-v7a.apk"; do
+            path="build/app/outputs/apk/release/$apk"
             if [ ! -f "$path" ]; then
               echo "::error::$path was not produced by the build."
               exit 1
@@ -263,8 +267,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          for apk in app-arm64-v8a-release.apk app-armeabi-v7a-release.apk; do
-            path="build/app/outputs/flutter-apk/$apk"
+          for apk in "kecilin-${RELEASE_VERSION}-arm64-v8a.apk" "kecilin-${RELEASE_VERSION}-armeabi-v7a.apk"; do
+            path="build/app/outputs/apk/release/$apk"
             if [ ! -f "$path" ]; then
               echo "::error::$path was not produced by the build."
               exit 1
@@ -287,10 +291,10 @@ jobs:
           done
 
       - name: Generate SHA256SUMS.txt
-        working-directory: build/app/outputs/flutter-apk
+        working-directory: build/app/outputs/apk/release
         run: |
           set -euo pipefail
-          sha256sum app-arm64-v8a-release.apk app-armeabi-v7a-release.apk > SHA256SUMS.txt
+          sha256sum "kecilin-${RELEASE_VERSION}-arm64-v8a.apk" "kecilin-${RELEASE_VERSION}-armeabi-v7a.apk" > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
       # Release notes come from CHANGELOG.md, which is already the source of
@@ -325,7 +329,7 @@ jobs:
       # should look at them once before they go live.
       #
       # Only two APKs and the checksums are attached:
-      #   - app-x86_64-release.apk is emulator-only and would be a trap for
+      #   - kecilin-<version>-x86_64.apk is emulator-only and would be a trap for
       #     anyone who picks it by mistake;
       #   - the AAB is signed with the upload key and is useless to end users —
       #     Play re-signs it with the app signing key.
@@ -337,7 +341,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           NOTES_MODE: ${{ steps.notes.outputs.mode }}
-        working-directory: build/app/outputs/flutter-apk
+        working-directory: build/app/outputs/apk/release
         run: |
           set -euo pipefail
 
@@ -361,8 +365,8 @@ jobs:
             --draft \
             --title "$GITHUB_REF_NAME" \
             "${notes_args[@]}" \
-            app-arm64-v8a-release.apk \
-            app-armeabi-v7a-release.apk \
+            "kecilin-${RELEASE_VERSION}-arm64-v8a.apk" \
+            "kecilin-${RELEASE_VERSION}-armeabi-v7a.apk" \
             SHA256SUMS.txt
 
       # Runs even when an earlier step failed: signing material must never

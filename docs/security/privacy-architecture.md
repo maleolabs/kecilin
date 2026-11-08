@@ -226,7 +226,7 @@ grep -E "allowBackup|fullBackupContent" android/app/src/main/AndroidManifest.xml
 git ls-files | grep -Ei '\.(jpe?g|pdf|docx?)$'                                    # expect nothing
 
 # 6. Permissions actually present
-aapt2 dump permissions build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+aapt2 dump permissions build/app/outputs/apk/release/kecilin-1.0.0-arm64-v8a.apk
 ```
 
 The `aapt2` dump is the authoritative check: it lists what the merged release manifest actually declares, after library merging and `tools:node="remove"` stripping.

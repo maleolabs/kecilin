@@ -1,3 +1,5 @@
+import com.android.build.OutputFile
+import com.android.build.gradle.internal.api.BaseVariantOutputImpl
 import java.util.Properties
 
 plugins {
@@ -81,6 +83,24 @@ android {
                 // data that no PDF code path in this app can reach.
                 "org/bouncycastle/pqc/**",
             )
+        }
+    }
+
+    // Release APK assets are identified at a glance by app + version, so the
+    // split APKs are named kecilin-<version>-<abi>.apk (for example
+    // kecilin-1.0.0-arm64-v8a.apk). Outputs land in
+    // build/app/outputs/apk/release/. The Flutter Gradle plugin still copies
+    // default-named APKs into build/app/outputs/flutter-apk/; those copies are
+    // NOT consumed by release.yml and exist only for `flutter`-tool convenience.
+    // A universal APK (no ABI filter, only built by `flutter build apk` without
+    // --split-per-abi) has no filter and keeps its default name.
+    // applicationVariants is deprecated in AGP 9; this project pins AGP 8.11.1.
+    applicationVariants.all {
+        val variantVersionName = versionName
+        outputs.all {
+            val output = this as BaseVariantOutputImpl
+            val abi = output.getFilter(OutputFile.ABI) ?: return@all
+            output.outputFileName = "kecilin-$variantVersionName-$abi.apk"
         }
     }
 }

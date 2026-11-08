@@ -209,10 +209,10 @@ No claim in this document should be read as covering the rows above.
 flutter pub get
 flutter build apk --release --split-per-abi
 flutter build appbundle --release
-ls -l build/app/outputs/flutter-apk/*.apk build/app/outputs/bundle/release/*.aab
+ls -l build/app/outputs/apk/release/*.apk build/app/outputs/bundle/release/*.aab
 
 # composition of one APK
-python3 - <<'PY' build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+python3 - <<'PY' build/app/outputs/apk/release/kecilin-1.0.0-arm64-v8a.apk
 import sys, zipfile, collections
 z = zipfile.ZipFile(sys.argv[1])
 g = collections.Counter()
@@ -227,7 +227,7 @@ for k, v in g.most_common():
 PY
 
 # on-device checks
-adb install -r build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+adb install -r build/app/outputs/apk/release/kecilin-1.0.0-arm64-v8a.apk
 adb shell am start -W -n com.maleolabs.kecilin/.MainActivity
 adb shell dumpsys meminfo com.maleolabs.kecilin | grep "TOTAL PSS"
 ```
