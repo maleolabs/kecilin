@@ -165,8 +165,11 @@ release APK and exercising the UI by hand.
 ### CI
 
 GitHub Actions runs formatting, `flutter analyze`, `flutter test`, and a release
-Android build using a throwaway keystore — production keys are never used in CI.
-See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+Android build using a throwaway keystore — `ci.yml` never touches production keys.
+Signed, distributable APKs come only from the tag-triggered
+[`release.yml`](.github/workflows/release.yml), which holds the release key in a
+protected environment behind an approval gate. See
+[`docs/releasing.md`](docs/releasing.md).
 
 ---
 

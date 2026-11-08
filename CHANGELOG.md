@@ -12,11 +12,16 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - GitHub Actions workflow: formatting, static analysis, tests, and a release build check.
 - Pull request and issue templates.
 - `LICENSE` (MIT), `.gitattributes`, `.editorconfig`, `android/key.properties.example`.
+- `.github/workflows/release.yml`: tag-triggered release that verifies the signing
+  certificate and the absence of the `INTERNET` permission, then creates a draft
+  GitHub release with the APKs and `SHA256SUMS.txt`.
 
 ### Changed
 
 - `tool/test_fixtures.sh` now generates its fixtures; it no longer reads any file
   from outside the repository.
+- `docs/releasing.md`: the automated release path is now the default and the manual
+  checklist is documented as the fallback.
 - Test fixtures were renamed (`sample-photo.jpg`) so nothing in the suite
   suggests a real document.
 - Lint baseline tightened: `unused_import`, `dead_code` and related rules are now

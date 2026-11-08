@@ -261,11 +261,13 @@ android/key.properties
 | Where are the credentials? | In `key.properties` on the developer machine, mode `0600` |
 | Are they in git? | No, and CI fails if they ever are |
 | What if the keystore is lost? | You cannot update an existing install. Users must uninstall first. **Back it up offline.** |
-| Can CI sign releases? | No. CI generates a throwaway keystore purely to prove the build works |
+| Can CI sign releases? | Only `release.yml`, on a `v*` tag, with the release key held in the `release` environment behind an approval gate. `ci.yml` never does |
 | Should the password be rotated? | Recommended before any public distribution. Rotating after release means a new signing identity |
 
-CI never holds release credentials; a signing key that is lost cannot be
-recovered, and an install cannot be updated without the original key.
+The release keystore is held in the `release` environment's secrets, so it is
+only available to a job that a required reviewer has approved, and only on a
+`v*` tag. A signing key that is lost cannot be recovered, and an install cannot
+be updated without the original key, so back it up offline regardless.
 
 ---
 

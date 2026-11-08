@@ -14,8 +14,12 @@
 # published — the key differs every run, so a CI APK/AAB can never update a
 # previous install (or the reverse).
 #
-# Actual releases are built on a developer machine with the real keystore.
-# See docs/releasing.md.
+# Actual releases are not built here. `release.yml` is the workflow that signs
+# with the real release key and produces distributable artifacts; this file
+# never does. That split is deliberate: ci.yml must stay runnable by any
+# contributor and on any fork, which is only true while it holds no release
+# credentials. A green CI run is a precondition for a release, not a substitute
+# for one. See docs/releasing.md.
 #
 # Toolchain notes (verified on a developer machine):
 #   - Gradle wrapper 8.14, AGP 8.11.1, Kotlin 2.2.20, Java source/target 17.

@@ -1,0 +1,375 @@
+# ---------------------------------------------------------------------------
+# Kecilin release — tag-triggered build, verification, and DRAFT GitHub release.
+#
+# TRIGGER
+# Pushing a tag matching v* is the whole release gesture. There is deliberately
+# no workflow_dispatch: a manual run carries no tag, so the tag/version check
+# that makes a release meaningful cannot be evaluated. Re-running a failed run
+# is available from the Actions UI, which keeps the original ref.
+#
+# APPROVAL
+# The job runs inside the `release` environment. Environment secrets are not
+# visible to the job until a required reviewer approves the deployment, which
+# means a pushed tag alone cannot spend the signing key.
+#
+# WHY A DRAFT
+# The assets are what users install. A human looks at them once (version,
+# checksums, permissions, signing identity) before they go live, so the
+# workflow creates a draft and a maintainer publishes it.
+#
+# RELATIONSHIP TO ci.yml
+# ci.yml signs with a throwaway keystore that exists only to prove the release
+# build still works; nothing it produces may be distributed. This file is the
+# only workflow that signs with the real release key. It is never a substitute
+# for ci.yml, and ci.yml is never a substitute for it.
+#
+# OFFLINE GUARANTEE
+# Kecilin declares no INTERNET permission. That is a product invariant, so the
+# workflow treats an APK that declares it as not releasable, full stop.
+# ---------------------------------------------------------------------------
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+# The release job creates a GitHub release. Nothing else in this repository is
+# written by this workflow.
+permissions:
+  contents: write
+
+# Keyed on the tag: two runs for the same tag can never race on the same draft
+# release. A run in progress is not cancelled — a half-verified release build is
+# worse than a slow one.
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  FLUTTER_VERSION: "3.38.5"
+  JAVA_VERSION: "21"
+
+jobs:
+  release:
+    name: Build, verify, and draft release
+    # Pinned image: the Android SDK and JDK layout are part of the build
+    # contract here, so a runner image change should be a reviewed commit.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    # Approval gate. A required reviewer must approve before this job starts,
+    # and environment secrets (RELEASE_KEYSTORE_BASE64 and the password set) only
+    # become available to the job after that approval. The environment should
+    # also be restricted to tags matching v*, so a branch build cannot request
+    # the signing key at all. See docs/releasing.md for the exact settings.
+    environment: release
+
+    steps:
+      # Full history: --generate-notes needs the previous tags and commits to
+      # describe what changed since the last release.
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # A tag is a promise about what is in the APK, and pubspec.yaml's version
+      # is compiled into versionName/versionCode. If the two disagree, the
+      # release ships labelled as something it is not.
+      - name: Assert tag matches pubspec version
+        run: |
+          set -euo pipefail
+
+          tag_version="${GITHUB_REF_NAME#v}"
+
+          # version: 1.0.0+1 -> 1.0.0. The build number after "+" is a Play
+          # upload counter and is deliberately not part of the tag name.
+          pubspec_version="$(awk -F: '
+            /^version:/ {
+              value = $2
+              gsub(/[[:space:]"]/, "", value)
+              split(value, parts, "+")
+              print parts[1]
+              exit
+            }
+          ' pubspec.yaml)"
+
+          if [ -z "$pubspec_version" ]; then
+            echo "::error::Could not read a version: line from pubspec.yaml."
+            exit 1
+          fi
+
+          if [ "$tag_version" != "$pubspec_version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match pubspec.yaml version $pubspec_version."
+            echo "::error::Bump pubspec.yaml and re-tag, or delete the tag. Do not release a mislabelled build."
+            exit 1
+          fi
+
+          echo "RELEASE_VERSION=$tag_version" >> "$GITHUB_ENV"
+          echo "Tag $GITHUB_REF_NAME matches pubspec.yaml ($pubspec_version)."
+
+      # JDK 21 (temurin) is not a preference: JDK 25 breaks Kotlin's
+      # JavaVersion parser, as noted in ci.yml. Keep the two workflows aligned.
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Flutter ${{ env.FLUTTER_VERSION }}
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2 (pinned)
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # The same gate ci.yml runs, repeated here on purpose: a tag can be pushed
+      # for a commit that never passed CI (ci.yml only runs on main and PRs), so
+      # the release must prove for itself that the tagged tree is clean. Never
+      # tag a build that would fail CI.
+      - name: Quality gate (same as CI)
+        run: |
+          set -euo pipefail
+          dart format --output=none --set-exit-if-changed .
+          flutter analyze
+          flutter test
+
+      # The signing material lives in environment secrets and exists only for
+      # the duration of this job; the cleanup step at the end removes it.
+      # storeFile is resolved by Gradle relative to the android/ project root,
+      # so "keystore/release.jks" means android/keystore/release.jks — the same
+      # convention as the local setup in docs/releasing.md.
+      - name: Restore release keystore
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          for name in RELEASE_KEYSTORE_BASE64 RELEASE_STORE_PASSWORD RELEASE_KEY_ALIAS RELEASE_KEY_PASSWORD; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::$name is empty. Check the release environment secrets in repository settings."
+              exit 1
+            fi
+          done
+
+          mkdir -p android/keystore
+          printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > android/keystore/release.jks
+          chmod 600 android/keystore/release.jks
+
+          {
+            echo "storeFile=keystore/release.jks"
+            echo "storePassword=$RELEASE_STORE_PASSWORD"
+            echo "keyAlias=$RELEASE_KEY_ALIAS"
+            echo "keyPassword=$RELEASE_KEY_PASSWORD"
+          } > android/key.properties
+          chmod 600 android/key.properties
+
+          echo "Release keystore restored ($(stat -c %s android/keystore/release.jks) bytes)."
+
+      - name: Build release APKs
+        run: flutter build apk --release --split-per-abi
+
+      # apksigner and aapt2 are not on PATH. They ship with the Android SDK
+      # build-tools, and AGP can auto-install a build-tools version during the
+      # build, so resolve them after the build and take the highest version
+      # present rather than hardcoding one that may not exist on the image.
+      - name: Resolve Android SDK build-tools
+        run: |
+          set -euo pipefail
+
+          if [ -z "${ANDROID_HOME:-}" ]; then
+            echo "::error::ANDROID_HOME is not set. Cannot locate apksigner/aapt2, and skipping the"
+            echo "::error::signing and permission checks would defeat the point of this workflow."
+            exit 1
+          fi
+
+          build_tools="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          if [ -z "$build_tools" ]; then
+            echo "::error::No build-tools directory found under $ANDROID_HOME/build-tools."
+            exit 1
+          fi
+
+          for tool in apksigner aapt2; do
+            if [ ! -x "$build_tools/$tool" ]; then
+              echo "::error::$tool is missing from $build_tools."
+              exit 1
+            fi
+          done
+
+          echo "BUILD_TOOLS=$build_tools" >> "$GITHUB_ENV"
+          echo "Using build-tools $(basename "$build_tools")."
+
+      # The certificate fingerprint is a public value — every APK hands it to the
+      # device — so it belongs in a repository variable, not a secret: it can be
+      # reviewed in the settings UI and printed in a log without leaking anything.
+      # A debug-signed APK has a different fingerprint and cannot pass, which is
+      # why no separate "is this debug-signed?" assertion is needed.
+      #
+      # apksigner labels the same line differently across build-tools versions and
+      # signing schemes ("Signer #1 certificate SHA-256 digest:" in older releases,
+      # "V2 Signer: certificate SHA-256 digest:" in newer ones), so match on the
+      # suffix and deduplicate. Exactly one distinct SHA-256 digest is expected: a
+      # key-rotation lineage would produce several and must be a reviewed decision,
+      # not something that slips through because one of them happened to match.
+      - name: Assert APKs are signed with the release certificate
+        env:
+          EXPECTED_CERT_SHA256: ${{ vars.RELEASE_CERT_SHA256 }}
+        run: |
+          set -euo pipefail
+
+          expected="$(printf '%s' "${EXPECTED_CERT_SHA256:-}" | tr -d '[:space:]:' | tr 'A-F' 'a-f')"
+          if [ -z "$expected" ]; then
+            echo "::error::Repository variable RELEASE_CERT_SHA256 is not set."
+            echo "::error::Set it to the release certificate SHA-256 fingerprint (see docs/releasing.md)."
+            exit 1
+          fi
+
+          for apk in app-arm64-v8a-release.apk app-armeabi-v7a-release.apk; do
+            path="build/app/outputs/flutter-apk/$apk"
+            if [ ! -f "$path" ]; then
+              echo "::error::$path was not produced by the build."
+              exit 1
+            fi
+
+            digests="$("$BUILD_TOOLS/apksigner" verify --print-certs "$path" \
+              | sed -n 's/.*certificate SHA-256 digest: *//p' \
+              | tr -d '[:space:]:' | tr 'A-F' 'a-f' | sort -u)"
+            count="$(printf '%s\n' "$digests" | grep -c . || true)"
+
+            if [ "$count" -ne 1 ]; then
+              echo "::error::Expected exactly one signer SHA-256 digest in $apk, found $count."
+              printf '%s\n' "$digests" | sed 's/^/::error::  /'
+              exit 1
+            fi
+
+            if [ "$digests" != "$expected" ]; then
+              echo "::error::$apk is signed with $digests, expected $expected."
+              echo "::error::The build is signed with the wrong key. Do not publish it."
+              exit 1
+            fi
+
+            echo "OK: $apk signed with the release certificate ($digests)."
+          done
+
+      # The product's offline guarantee, checked on the artifact itself rather
+      # than on the source. A release that declares INTERNET is not releasable
+      # regardless of what else passed.
+      - name: Assert APKs do not declare INTERNET permission
+        run: |
+          set -euo pipefail
+
+          for apk in app-arm64-v8a-release.apk app-armeabi-v7a-release.apk; do
+            path="build/app/outputs/flutter-apk/$apk"
+            if [ ! -f "$path" ]; then
+              echo "::error::$path was not produced by the build."
+              exit 1
+            fi
+
+            dump="$("$BUILD_TOOLS/aapt2" dump permissions "$path")"
+            if [ -z "$dump" ]; then
+              echo "::error::aapt2 printed no permission block for $apk; refusing to assume it is clean."
+              exit 1
+            fi
+
+            echo "Permissions in $apk:"
+            printf '%s\n' "$dump" | sed 's/^/  /'
+
+            if printf '%s\n' "$dump" | grep -Fq 'android.permission.INTERNET'; then
+              echo "::error::$apk declares android.permission.INTERNET."
+              echo "::error::Kecilin is an offline app. That build is not releasable."
+              exit 1
+            fi
+          done
+
+      - name: Generate SHA256SUMS.txt
+        working-directory: build/app/outputs/flutter-apk
+        run: |
+          set -euo pipefail
+          sha256sum app-arm64-v8a-release.apk app-armeabi-v7a-release.apk > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      # Release notes come from CHANGELOG.md, which is already the source of
+      # truth for what changed. The heading form is "## [1.0.0] — 2026-11-07";
+      # everything until the next "## " heading is the section for this version.
+      # If the section is missing or blank, the workflow falls back to GitHub's
+      # generated notes instead of publishing an empty release.
+      - name: Extract release notes from CHANGELOG.md
+        id: notes
+        run: |
+          set -euo pipefail
+
+          # index() rather than a regex: the version is matched literally, so
+          # dots and prerelease suffixes cannot leak into pattern semantics.
+          awk -v ver="$RELEASE_VERSION" '
+            BEGIN { target = "## [" ver "]" }
+            !inside && index($0, target) == 1 { inside = 1; next }
+            inside && /^## / { exit }
+            inside { print }
+          ' CHANGELOG.md | sed -e '/./,$!d' > release-notes.md
+
+          if grep -q '[^[:space:]]' release-notes.md; then
+            echo "mode=file" >> "$GITHUB_OUTPUT"
+            echo "Using the CHANGELOG.md section for $RELEASE_VERSION."
+          else
+            rm -f release-notes.md
+            echo "mode=generate" >> "$GITHUB_OUTPUT"
+            echo "No CHANGELOG.md section for $RELEASE_VERSION; falling back to generated notes."
+          fi
+
+      # Draft, not published: these assets are what users install, and a human
+      # should look at them once before they go live.
+      #
+      # Only two APKs and the checksums are attached:
+      #   - app-x86_64-release.apk is emulator-only and would be a trap for
+      #     anyone who picks it by mistake;
+      #   - the AAB is signed with the upload key and is useless to end users —
+      #     Play re-signs it with the app signing key.
+      #
+      # Re-running a failed job must not trip over the draft it left behind, so
+      # an existing draft for this tag is replaced. A published release is left
+      # alone and fails loudly instead.
+      - name: Create draft GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NOTES_MODE: ${{ steps.notes.outputs.mode }}
+        working-directory: build/app/outputs/flutter-apk
+        run: |
+          set -euo pipefail
+
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            is_draft="$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq '.isDraft')"
+            if [ "$is_draft" != "true" ]; then
+              echo "::error::Release $GITHUB_REF_NAME is already published. Refusing to overwrite it."
+              echo "::error::Cut a new version instead of re-uploading under the same version code."
+              exit 1
+            fi
+            echo "Replacing the existing draft release for $GITHUB_REF_NAME."
+            gh release delete "$GITHUB_REF_NAME" --yes
+          fi
+
+          notes_args=(--generate-notes)
+          if [ "$NOTES_MODE" = "file" ]; then
+            notes_args=(--notes-file "$GITHUB_WORKSPACE/release-notes.md")
+          fi
+
+          gh release create "$GITHUB_REF_NAME" \
+            --draft \
+            --title "$GITHUB_REF_NAME" \
+            "${notes_args[@]}" \
+            app-arm64-v8a-release.apk \
+            app-armeabi-v7a-release.apk \
+            SHA256SUMS.txt
+
+      # Runs even when an earlier step failed: signing material must never
+      # survive on the runner or end up in a cached workspace.
+      - name: Remove signing material
+        if: always()
+        run: |
+          rm -rf android/keystore
+          rm -f android/key.properties
+          echo "Signing material removed from the workspace."
