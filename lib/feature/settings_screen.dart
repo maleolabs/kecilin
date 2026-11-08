@@ -108,7 +108,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onPressed: _outputBytes == 0
                             ? null
                             : _confirmClearOutputs,
-                        child: const Text('Hapus'),
+                        child: Text(
+                          'Hapus',
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: colors.dangerText,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -135,7 +140,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onPressed: history.items.isEmpty
                         ? null
                         : _confirmClearHistory,
-                    child: const Text('Bersihkan'),
+                    child: Text(
+                      'Bersihkan',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: colors.dangerText,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -184,26 +194,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _confirmClearOutputs() async {
     final scope = AppScope.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Hapus file hasil?'),
-        content: const Text(
+    final confirmed = await confirmDialog(
+      context,
+      title: 'Hapus file hasil?',
+      message:
           'Salinan file di Download/Kecilin yang dibuat aplikasi ini tidak ikut terhapus.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Hapus',
+      destructive: true,
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
     await scope.controller.outputs.clear();
     await _refreshSize();
     if (mounted) _toast(context, 'File hasil dihapus.');
@@ -211,26 +210,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _confirmClearHistory() async {
     final history = AppScope.of(context).history;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Bersihkan riwayat?'),
-        content: const Text(
+    final confirmed = await confirmDialog(
+      context,
+      title: 'Bersihkan riwayat?',
+      message:
           'Riwayat dan statistik penghematan akan dihapus. File hasil di folder Download tidak ikut terhapus.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Batal'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Bersihkan'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Bersihkan',
+      destructive: true,
     );
-    if (confirmed != true) return;
+    if (!confirmed) return;
     await history.clear();
     if (mounted) _toast(context, 'Riwayat dibersihkan.');
   }

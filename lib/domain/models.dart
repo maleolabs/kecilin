@@ -158,6 +158,7 @@ class JobResult {
     this.targetBytes,
     this.savedToDownloads,
     this.outputExtension,
+    this.finishedAt,
   });
 
   final String sourcePath;
@@ -172,6 +173,9 @@ class JobResult {
   final int? targetBytes;
   final String? savedToDownloads;
   final String? outputExtension;
+
+  /// Kapan kompresi selesai. Null pada entri riwayat lama (pra-redesign).
+  final DateTime? finishedAt;
 
   int get savedBytes => sourceBytes - outputBytes;
 
@@ -192,6 +196,7 @@ class JobResult {
     'targetBytes': targetBytes,
     'savedToDownloads': savedToDownloads,
     'outputExtension': outputExtension,
+    'finishedAt': finishedAt?.toIso8601String(),
   };
 
   factory JobResult.fromJson(Map<String, dynamic> json) {
@@ -213,6 +218,9 @@ class JobResult {
       targetBytes: (json['targetBytes'] as num?)?.toInt(),
       savedToDownloads: json['savedToDownloads'] as String?,
       outputExtension: json['outputExtension'] as String?,
+      finishedAt: json['finishedAt'] == null
+          ? null
+          : DateTime.tryParse(json['finishedAt'] as String),
     );
   }
 }

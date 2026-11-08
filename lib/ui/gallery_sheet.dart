@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../app.dart';
 import '../data/gallery.dart';
@@ -168,6 +170,7 @@ class _GallerySheetState extends State<GallerySheet> {
 
   void _toggle(GalleryEntry entry) {
     if (_materializing) return;
+    HapticFeedback.selectionClick();
 
     final index = _selected.indexWhere((item) => item.key == entry.key);
     if (index >= 0) {
@@ -282,29 +285,38 @@ class _GallerySheetState extends State<GallerySheet> {
           initialChildSize: 0.82,
           minChildSize: 0.45,
           maxChildSize: 0.95,
-          builder: (context, scrollController) => Material(
-            color: colors.surface,
-            clipBehavior: Clip.antiAlias,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            child: Column(
-              children: [
-                _handle(colors),
-                _header(context),
-                Expanded(
-                  child: AbsorbPointer(
-                    absorbing: _materializing,
-                    child: NotificationListener<ScrollNotification>(
-                      onNotification: _onScroll,
-                      child: CustomScrollView(
-                        controller: scrollController,
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        slivers: _slivers(context),
+          builder: (context, scrollController) => ClipRRect(
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppRadius.sheet),
+            ),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: colors.glassSurface,
+                  border: Border(top: BorderSide(color: colors.glassBorder)),
+                ),
+                child: Column(
+                  children: [
+                    _handle(colors),
+                    _header(context),
+                    Expanded(
+                      child: AbsorbPointer(
+                        absorbing: _materializing,
+                        child: NotificationListener<ScrollNotification>(
+                          onNotification: _onScroll,
+                          child: CustomScrollView(
+                            controller: scrollController,
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            slivers: _slivers(context),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    _footer(context),
+                  ],
                 ),
-                _footer(context),
-              ],
+              ),
             ),
           ),
         ),
@@ -496,7 +508,7 @@ class _GallerySheetState extends State<GallerySheet> {
       padding: const EdgeInsets.fromLTRB(12, 10, 4, 6),
       decoration: BoxDecoration(
         color: colors.surfaceAlt,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppRadius.large),
         border: Border.all(color: colors.line),
       ),
       child: Column(
@@ -546,14 +558,14 @@ class _GallerySheetState extends State<GallerySheet> {
               height: 56,
               decoration: BoxDecoration(
                 color: colors.accentSoft,
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(AppRadius.large),
               ),
               child: Icon(
                 unavailable
                     ? Icons.image_not_supported_outlined
                     : Icons.photo_library_outlined,
                 size: 26,
-                color: colors.accent,
+                color: colors.accentText,
               ),
             ),
           ),
@@ -610,15 +622,28 @@ class _GallerySheetState extends State<GallerySheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (_notice != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: NoteBanner(
-                tone: _noticeTone,
-                icon: Icons.info_outline,
-                message: _notice!,
-              ),
+          // Notice fades/slides in and collapses smoothly when dismissed.
+          AnimatedSize(
+            duration: AppMotion.base,
+            curve: AppMotion.standard,
+            alignment: Alignment.topCenter,
+            child: AnimatedSwitcher(
+              duration: AppMotion.base,
+              transitionBuilder: (child, animation) =>
+                  FadeTransition(opacity: animation, child: child),
+              child: _notice == null
+                  ? const SizedBox(width: double.infinity)
+                  : Padding(
+                      key: ValueKey(_notice),
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: NoteBanner(
+                        tone: _noticeTone,
+                        icon: Icons.info_outline,
+                        message: _notice!,
+                      ),
+                    ),
             ),
+          ),
           if (_materializing)
             SizedBox(
               height: 54,
@@ -685,13 +710,16 @@ class _CtaTile extends StatelessWidget {
       onTap: busy ? null : onTap,
       child: ExcludeSemantics(
         child: Material(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(14),
+          color: colors.surfaceAlt.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(AppRadius.medium),
           child: InkWell(
             onTap: busy ? null : onTap,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(AppRadius.medium),
             child: CustomPaint(
-              painter: _DashedBorderPainter(color: colors.line, radius: 14),
+              painter: _DashedBorderPainter(
+                color: colors.line,
+                radius: AppRadius.medium,
+              ),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 6),
                 child: Center(
@@ -721,7 +749,7 @@ class _CtaTile extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.labelLarge?.copyWith(
                           fontSize: 12.5,
-                          color: colors.accent,
+                          color: colors.accentText,
                         ),
                       ),
                     ],
@@ -736,7 +764,7 @@ class _CtaTile extends StatelessWidget {
   }
 }
 
-class _ImageCell extends StatelessWidget {
+class _ImageCell extends StatefulWidget {
   const _ImageCell({
     required this.entry,
     required this.position,
@@ -752,100 +780,118 @@ class _ImageCell extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
+  State<_ImageCell> createState() => _ImageCellState();
+}
+
+class _ImageCellState extends State<_ImageCell> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
     final colors = AppColors.of(context);
-    final selected = order != null;
+    final selected = widget.order != null;
     final label = selected
-        ? 'Gambar $position, dipilih urutan $order'
-        : 'Gambar $position, belum dipilih';
+        ? 'Gambar ${widget.position}, dipilih urutan ${widget.order}'
+        : 'Gambar ${widget.position}, belum dipilih';
 
     return Semantics(
       container: true,
       button: true,
       selected: selected,
       label: label,
-      onTap: onTap,
+      onTap: widget.onTap,
       child: ExcludeSemantics(
-        child: Material(
-          color: colors.surfaceAlt,
-          borderRadius: BorderRadius.circular(14),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onTap,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final ratio = MediaQuery.devicePixelRatioOf(context);
-                    final cacheWidth = (constraints.maxWidth * ratio)
-                        .round()
-                        .clamp(180, 720)
-                        .toInt();
-                    return Image.file(
-                      File(entry.path),
-                      fit: BoxFit.cover,
-                      cacheWidth: cacheWidth,
-                      frameBuilder: (context, child, frame, loaded) =>
-                          frame == null && !loaded
-                          ? ColoredBox(color: colors.surfaceAlt)
-                          : child,
-                      errorBuilder: (_, _, _) => ColoredBox(
-                        color: colors.surfaceAlt,
-                        child: Center(
-                          child: Icon(
-                            Icons.broken_image_outlined,
-                            size: 20,
-                            color: colors.muted,
+        child: AnimatedScale(
+          // Subtle press feedback; full spring overshoot not worth it here.
+          scale: _pressed ? 0.96 : 1.0,
+          duration: AppMotion.fast,
+          curve: Curves.easeOut,
+          child: Material(
+            color: colors.surfaceAlt,
+            borderRadius: BorderRadius.circular(AppRadius.medium),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: widget.onTap,
+              onHighlightChanged: (highlight) =>
+                  setState(() => _pressed = highlight),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final ratio = MediaQuery.devicePixelRatioOf(context);
+                      final cacheWidth = (constraints.maxWidth * ratio)
+                          .round()
+                          .clamp(180, 720)
+                          .toInt();
+                      return Image.file(
+                        File(widget.entry.path),
+                        fit: BoxFit.cover,
+                        cacheWidth: cacheWidth,
+                        frameBuilder: (context, child, frame, loaded) =>
+                            frame == null && !loaded
+                            ? ColoredBox(color: colors.surfaceAlt)
+                            : child,
+                        errorBuilder: (_, _, _) => ColoredBox(
+                          color: colors.surfaceAlt,
+                          child: Center(
+                            child: Icon(
+                              Icons.broken_image_outlined,
+                              size: 20,
+                              color: colors.muted,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  if (selected) ...[
+                    IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(AppRadius.medium),
+                          border: Border.all(
+                            color: colors.accent,
+                            width: AppBorder.focus,
                           ),
                         ),
                       ),
-                    );
-                  },
-                ),
-                if (selected) ...[
-                  IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: colors.accent, width: 2),
-                      ),
                     ),
-                  ),
-                  Positioned(
-                    top: 6,
-                    right: 6,
-                    child: Container(
-                      height: 22,
-                      padding: const EdgeInsets.symmetric(horizontal: 5),
-                      decoration: BoxDecoration(
-                        color: colors.accent,
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: colors.surface, width: 1.5),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.check, size: 12, color: colors.onAccent),
-                          const SizedBox(width: 2),
-                          Text(
-                            '$order',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              height: 1,
-                              fontWeight: FontWeight.w800,
-                              color: colors.onAccent,
-                              fontFeatures: const [
-                                FontFeature.tabularFigures(),
-                              ],
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: Container(
+                        height: 22,
+                        padding: const EdgeInsets.symmetric(horizontal: 5),
+                        decoration: BoxDecoration(
+                          color: colors.accent,
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: colors.surface, width: 1.5),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check, size: 12, color: colors.onAccent),
+                            const SizedBox(width: 2),
+                            Text(
+                              '${widget.order}',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                height: 1,
+                                fontWeight: FontWeight.w800,
+                                color: colors.onAccent,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),
@@ -863,7 +909,7 @@ class _LoadingTile extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.surfaceAlt,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppRadius.medium),
       ),
       child: Center(
         child: SizedBox(
@@ -892,15 +938,15 @@ class _RetryTile extends StatelessWidget {
       child: ExcludeSemantics(
         child: Material(
           color: colors.surfaceAlt,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(AppRadius.medium),
           child: InkWell(
             onTap: onTap,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(AppRadius.medium),
             child: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.refresh, size: 20, color: colors.warn),
+                  Icon(Icons.refresh, size: 20, color: colors.warnText),
                   const SizedBox(height: 4),
                   Text(
                     'Coba lagi',
@@ -908,7 +954,7 @@ class _RetryTile extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.labelLarge?.copyWith(
                       fontSize: 12,
-                      color: colors.warn,
+                      color: colors.warnText,
                     ),
                   ),
                 ],

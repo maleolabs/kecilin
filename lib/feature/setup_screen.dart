@@ -29,6 +29,7 @@ class SetupScreen extends StatelessWidget {
       listenable: controller,
       builder: (context, _) {
         final kind = controller.selectionKind ?? MediaKind.image;
+        final options = controller.options;
         return Scaffold(
           appBar: AppBar(
             title: const Text('Atur kompresi'),
@@ -46,7 +47,24 @@ class SetupScreen extends StatelessWidget {
               ),
               ..._modeOptions(context, controller, kind),
               const SizedBox(height: 24),
-              ..._detailOptions(context, controller, kind),
+              AnimatedSize(
+                duration: AppMotion.base,
+                curve: AppMotion.standard,
+                alignment: Alignment.topCenter,
+                child: AnimatedSwitcher(
+                  duration: AppMotion.base,
+                  child: Column(
+                    // Keyed by mode so option blocks cross-fade and the
+                    // list resizes smoothly instead of jumping.
+                    key: ValueKey(
+                      kind == MediaKind.image
+                          ? options.imageMode
+                          : options.pdfMode,
+                    ),
+                    children: _detailOptions(context, controller, kind),
+                  ),
+                ),
+              ),
             ],
           ),
           bottomNavigationBar: StickyFooter(
@@ -57,7 +75,12 @@ class SetupScreen extends StatelessWidget {
                       MaterialPageRoute(builder: (_) => const RunScreen()),
                     ),
               icon: const Icon(Icons.bolt_rounded, size: 20),
-              label: Text('Kompres ${controller.selection.length} file'),
+              label: Text(
+                controller.selection.isEmpty
+                    ? 'Kompres 0 file'
+                    : 'Kompres ${controller.selection.length} file · '
+                          '${formatBytes(controller.totalBytes)}',
+              ),
             ),
           ),
         );
@@ -151,10 +174,10 @@ class SetupScreen extends StatelessWidget {
               runSpacing: 8,
               children: [
                 for (final preset in const [
-                  (label: 'Tinggi', value: 90),
-                  (label: 'Seimbang', value: 78),
-                  (label: 'Kecil', value: 62),
-                  (label: 'Paling kecil', value: 50),
+                  (label: 'Tinggi · 90', value: 90),
+                  (label: 'Seimbang · 78', value: 78),
+                  (label: 'Kecil · 62', value: 62),
+                  (label: 'Paling kecil · 50', value: 50),
                 ])
                   ChoicePill(
                     label: preset.label,

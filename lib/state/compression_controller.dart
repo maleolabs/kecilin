@@ -182,6 +182,7 @@ class CompressionController extends ChangeNotifier {
           note: outcome.note,
           targetBytes: _options.targetBytes,
           savedToDownloads: savedPath,
+          finishedAt: DateTime.now(),
         );
         results.add(result);
         // Losing the history entry is a cosmetic problem; it must never delete

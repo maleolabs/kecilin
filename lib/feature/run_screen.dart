@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../app.dart';
 import '../ui/app_theme.dart';
+import '../ui/widgets.dart';
 import 'result_screen.dart';
 
 class RunScreen extends StatefulWidget {
@@ -38,26 +39,15 @@ class _RunScreenState extends State<RunScreen> {
   Future<void> _confirmCancel() async {
     final controller = AppScope.of(context).controller;
     if (controller.cancelRequested) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Batalkan kompresi?'),
-        content: const Text(
+    final confirmed = await confirmDialog(
+      context,
+      title: 'Batalkan kompresi?',
+      message:
           'File yang sudah selesai tetap tersimpan. Sisa antrean tidak diproses.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Lanjutkan'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Batalkan'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Batalkan',
+      cancelLabel: 'Lanjutkan',
     );
-    if (confirmed == true) controller.requestCancel();
+    if (confirmed) controller.requestCancel();
   }
 
   @override
@@ -89,50 +79,49 @@ class _RunScreenState extends State<RunScreen> {
                 child: Column(
                   children: [
                     const Spacer(flex: 2),
-                    SizedBox(
-                      width: 172,
-                      height: 172,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          SizedBox(
-                            width: 172,
-                            height: 172,
-                            child: TweenAnimationBuilder<double>(
-                              tween: Tween(begin: 0, end: overall),
-                              duration: AppMotion.progress,
-                              builder: (context, value, _) =>
-                                  CircularProgressIndicator(
-                                    value: value.clamp(0.0, 1.0),
-                                    strokeWidth: 9,
-                                    strokeCap: StrokeCap.round,
-                                    backgroundColor: colors.surfaceAlt,
-                                    valueColor: AlwaysStoppedAnimation(
-                                      colors.accent,
+                    GlassCard(
+                      radius: 24,
+                      child: SizedBox(
+                        width: 172,
+                        height: 172,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            SizedBox(
+                              width: 172,
+                              height: 172,
+                              child: TweenAnimationBuilder<double>(
+                                tween: Tween(begin: 0, end: overall),
+                                duration: AppMotion.progress,
+                                builder: (context, value, _) =>
+                                    CircularProgressIndicator(
+                                      value: value.clamp(0.0, 1.0),
+                                      strokeWidth: 9,
+                                      strokeCap: StrokeCap.round,
+                                      backgroundColor: colors.surfaceAlt,
+                                      valueColor: AlwaysStoppedAnimation(
+                                        colors.accent,
+                                      ),
                                     ),
-                                  ),
+                              ),
                             ),
-                          ),
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                '${(overall * 100).round()}%',
-                                style: kNumbers.copyWith(
-                                  fontSize: 40,
-                                  color: colors.ink,
-                                  fontFeatures: const [
-                                    FontFeature.tabularFigures(),
-                                  ],
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '${(overall * 100).round()}%',
+                                  style: kHeroNumber.copyWith(
+                                    color: colors.ink,
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                cancelling ? 'Membatalkan' : 'Memproses',
-                                style: theme.textTheme.bodySmall,
-                              ),
-                            ],
-                          ),
-                        ],
+                                Text(
+                                  cancelling ? 'Membatalkan' : 'Memproses',
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 34),

@@ -35,6 +35,17 @@ String formatDuration(Duration duration) {
   return '${duration.inMinutes} mnt $seconds dtk';
 }
 
+/// Waktu relatif singkat untuk baris riwayat, contoh: "5 mnt lalu", "Kemarin".
+String formatRelativeTime(DateTime time) {
+  final delta = DateTime.now().difference(time);
+  if (delta.inMinutes < 1) return 'baru saja';
+  if (delta.inMinutes < 60) return '${delta.inMinutes} mnt lalu';
+  if (delta.inHours < 24) return '${delta.inHours} jam lalu';
+  if (delta.inDays < 2) return 'Kemarin';
+  if (delta.inDays < 7) return '${delta.inDays} hari lalu';
+  return '${time.day}/${time.month}/${time.year}';
+}
+
 /// Parses "200kb", "1.5 MB", "750 KB" into bytes. Returns null when the input
 /// has no explicit unit, because guessing the unit is how people lose files.
 int? parseSize(String raw) {

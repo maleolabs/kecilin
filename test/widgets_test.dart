@@ -57,6 +57,33 @@ void main() {
     expect(tapped, 1);
   });
 
+  testWidgets('ChoicePill stays compact and centers its label vertically', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _host(
+        Row(
+          children: [
+            ChoicePill(
+              label: '200 KB',
+              selected: false,
+              accent: const Color(0xFF0E6B57),
+              onTap: () {},
+            ),
+          ],
+        ),
+      ),
+    );
+
+    final pill = tester.getRect(find.byType(AnimatedContainer));
+    final text = tester.getRect(find.text('200 KB'));
+
+    // Tidak melebar memenuhi host 320px.
+    expect(pill.width, lessThan(160));
+    // Teks benar-benar di tengah vertikal pill.
+    expect((text.center.dy - pill.center.dy).abs(), lessThan(0.5));
+  });
+
   testWidgets('OptionCard shows the selected state', (tester) async {
     await tester.pumpWidget(
       _host(

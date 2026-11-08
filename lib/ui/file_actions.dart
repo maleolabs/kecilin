@@ -8,6 +8,7 @@ import '../core/format.dart';
 import '../data/output_store.dart';
 import '../domain/models.dart';
 import 'app_theme.dart';
+import 'widgets.dart';
 
 Future<void> shareFiles(
   BuildContext context,
@@ -46,11 +47,19 @@ Future<void> showFileActions(
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                child: Text(
-                  name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(sheetContext).textTheme.titleMedium,
+                child: Row(
+                  children: [
+                    KindGlyph(kind: kind, size: 24),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(sheetContext).textTheme.titleMedium,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               ListTile(

@@ -54,7 +54,9 @@ class ResultScreen extends StatelessWidget {
                       ? 'Gagal memproses'
                       : 'Hemat ${formatPercent(report.savedRatio)}',
                   style: theme.textTheme.displaySmall?.copyWith(
-                    color: results.isEmpty ? colors.danger : colors.accent,
+                    color: results.isEmpty
+                        ? colors.dangerText
+                        : colors.accentText,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -113,7 +115,7 @@ class ResultScreen extends StatelessWidget {
                   Text(
                     '${report.failures.length} file gagal',
                     style: theme.textTheme.titleMedium?.copyWith(
-                      color: colors.danger,
+                      color: colors.dangerText,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -208,7 +210,6 @@ class _ResultRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final colors = AppColors.of(context);
     final exists = File(result.outputPath).existsSync();
 
@@ -218,7 +219,7 @@ class _ResultRow extends StatelessWidget {
         '${result.pages != null ? ' • ${result.pages} halaman' : ''}'
         '${exists ? '' : ' • file terhapus'}';
 
-    return FileRow(
+    final row = FileRow(
       name: baseName(result.outputPath),
       kind: result.kind,
       meta: note == null || note.isEmpty ? meta : '$meta\n$note',
@@ -230,11 +231,33 @@ class _ResultRow extends StatelessWidget {
           SavingsBadge(ratio: result.savedRatio),
           if (!result.targetMet) ...[
             const SizedBox(height: 4),
-            Text(
-              'target belum tercapai',
-              style: theme.textTheme.labelSmall?.copyWith(color: colors.warn),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: colors.warnSoft,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                'target belum tercapai',
+                style: kNumbers.copyWith(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: colors.warnText,
+                ),
+              ),
             ),
           ],
+        ],
+      ),
+    );
+    if (exists) return row;
+    // Output file no longer on disk: keep the row for the record but dim it.
+    return Opacity(
+      opacity: 0.5,
+      child: Row(
+        children: [
+          Expanded(child: row),
+          Icon(Icons.info_outline, size: 16, color: colors.infoText),
         ],
       ),
     );
