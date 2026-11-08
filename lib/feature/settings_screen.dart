@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app.dart';
+import '../core/app_version.dart';
 import '../core/format.dart';
 import '../ui/app_theme.dart';
 import '../ui/widgets.dart';
@@ -159,7 +160,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       children: [
                         Text('Kecilin', style: theme.textTheme.titleLarge),
                         const SizedBox(width: 8),
-                        Text('1.0.0', style: theme.textTheme.bodySmall),
+                        Text(appVersion, style: theme.textTheme.bodySmall),
                       ],
                     ),
                     const SizedBox(height: 2),

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/changelog.dart';
 import '../domain/models.dart';
 
 class SettingsStore extends ChangeNotifier {
@@ -11,6 +12,7 @@ class SettingsStore extends ChangeNotifier {
     this._themeMode,
     this._autoSave,
     this._lastOptions,
+    this._seenVersion,
   );
 
   static const _key = 'settings.v2';
@@ -20,11 +22,16 @@ class SettingsStore extends ChangeNotifier {
   bool _autoSave;
   CompressionOptions _lastOptions;
 
+  /// Versi aplikasi yang terakhir menampilkan sambutan/changelog. Null =
+  /// pengguna baru (instal pertama).
+  String? _seenVersion;
+
   static Future<SettingsStore> create() async {
     final preferences = await SharedPreferences.getInstance();
     var themeMode = ThemeMode.system;
     var autoSave = true;
     var options = const CompressionOptions();
+    String? seenVersion;
 
     final raw = preferences.getString(_key);
     if (raw != null && raw.isNotEmpty) {
@@ -35,6 +42,7 @@ class SettingsStore extends ChangeNotifier {
           orElse: () => ThemeMode.system,
         );
         autoSave = json['autoSave'] as bool? ?? true;
+        seenVersion = json['seenVersion'] as String?;
         final optionsJson = json['options'];
         if (optionsJson is Map) {
           options = CompressionOptions.fromJson(
@@ -46,7 +54,13 @@ class SettingsStore extends ChangeNotifier {
       }
     }
 
-    return SettingsStore._(preferences, themeMode, autoSave, options);
+    return SettingsStore._(
+      preferences,
+      themeMode,
+      autoSave,
+      options,
+      seenVersion,
+    );
   }
 
   ThemeMode get themeMode => _themeMode;
@@ -54,6 +68,16 @@ class SettingsStore extends ChangeNotifier {
   bool get autoSaveToDownloads => _autoSave;
 
   CompressionOptions get lastOptions => _lastOptions;
+
+  String? get seenVersion => _seenVersion;
+
+  Future<void> markVersionSeen(String version) async {
+    // Downgrade tidak menimpa riwayat yang lebih baru; popup tidak berulang
+    // saat pengguna kembali ke versi lama lalu update lagi.
+    if (_seenVersion != null && !isNewerVersion(version, _seenVersion!)) return;
+    _seenVersion = version;
+    await _persist();
+  }
 
   Future<void> setThemeMode(ThemeMode mode) async {
     if (_themeMode == mode) return;
@@ -81,6 +105,7 @@ class SettingsStore extends ChangeNotifier {
         'themeMode': _themeMode.name,
         'autoSave': _autoSave,
         'options': _lastOptions.toJson(),
+        if (_seenVersion != null) 'seenVersion': _seenVersion,
       }),
     );
   }
