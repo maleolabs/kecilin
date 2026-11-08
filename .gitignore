@@ -1,0 +1,69 @@
+# ---------------------------------------------------------------------------
+# Flutter / Dart
+# ---------------------------------------------------------------------------
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+coverage/
+doc/api/
+*.iml
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# ---------------------------------------------------------------------------
+# IDE / editor
+# ---------------------------------------------------------------------------
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ---------------------------------------------------------------------------
+# Signing material — NEVER commit. Losing the release keystore is recoverable
+# only from your own backup; leaking it is not recoverable at all.
+# ---------------------------------------------------------------------------
+android/key.properties
+android/keystore/
+*.jks
+*.keystore
+*.p12
+*.pem
+*.key
+
+# Local machine paths (Flutter SDK, Android SDK)
+android/local.properties
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Pods/
+ios/.symlinks/
+
+# ---------------------------------------------------------------------------
+# Secrets and local environment
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.secret
+secrets.json
+
+# ---------------------------------------------------------------------------
+# Gradle / Kotlin caches
+# ---------------------------------------------------------------------------
+android/.gradle/
+android/.kotlin/
+
+# ---------------------------------------------------------------------------
+# Generated test fixtures (tool/test_fixtures.sh). Synthetic, but ~5 MB and
+# never part of a build.
+# ---------------------------------------------------------------------------
+integration_test/assets/
+
+# ---------------------------------------------------------------------------
+# OS noise
+# ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+*.log

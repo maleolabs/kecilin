@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Matches the app background so the adaptive icon has no visible seam. -->
+    <color name="ic_launcher_background">#FFFFFF</color>
+    <color name="splash_background">#F5F8FA</color>
+    <color name="splash_background_dark">#101D27</color>
+</resources>

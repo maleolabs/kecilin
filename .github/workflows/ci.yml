@@ -1,0 +1,166 @@
+# ---------------------------------------------------------------------------
+# Kecilin CI — quality gate plus Android release build validation.
+#
+# WHY THERE IS NO PRODUCTION SIGNING HERE
+# A release build in this project requires android/key.properties and
+# android/keystore/kecilin-release.jks, and both are deliberately gitignored.
+# Putting the production keystore in GitHub Secrets would tie the key that can
+# sign app updates to the security of the CI account. For an app distributed by
+# sideload the risk outweighs the benefit.
+#
+# So CI generates a throwaway keystore on the runner. It exists for one reason:
+# to prove that R8/minify, resource shrinking, proguard rules, and release
+# packaging still work after a code change. Artifacts from this job MUST NOT be
+# published — the key differs every run, so a CI APK/AAB can never update a
+# previous install (or the reverse).
+#
+# Actual releases are built on a developer machine with the real keystore.
+# See docs/releasing.md.
+#
+# Toolchain notes (verified on a developer machine):
+#   - Gradle wrapper 8.14, AGP 8.11.1, Kotlin 2.2.20, Java source/target 17.
+#   - JDK is pinned to 21 (temurin). JDK 25 breaks Kotlin's JavaVersion parser
+#     ("25.0.4.1"), so do not bump it without testing `./gradlew` first.
+#   - integration_test/ is deliberately NOT run: it needs a physical device and
+#     synthetic fixtures from tool/test_fixtures.sh (also gitignored).
+# ---------------------------------------------------------------------------
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least privilege: this workflow never writes to the repository.
+permissions:
+  contents: read
+
+# A run superseded by a newer commit is cancelled, not queued.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: "3.38.5"
+  JAVA_VERSION: "21"
+
+jobs:
+  quality:
+    name: Quality (format, analyze, test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Cheap but important guard, deliberately first so it fails in seconds.
+      # Signing material and env files must never be tracked. If this fails,
+      # remove them from the index and purge the history — adding them to
+      # .gitignore is not enough, because already-tracked files keep shipping.
+      # .env.example is deliberately excluded (see .gitignore).
+      - name: Assert no signing material or env file is tracked
+        run: |
+          offenders="$(git ls-files | grep -Ei \
+            '(^|/)key\.properties$|\.(jks|keystore|p12|pem|key)$|(^|/)\.env$|(^|/)\.env\.(local|dev|development|prod|production|staging|test)$' \
+            || true)"
+          if [ -n "$offenders" ]; then
+            echo "::error::Signing/env files are tracked in git. Remove them from the index and history before merging."
+            echo "$offenders"
+            exit 1
+          fi
+          echo "OK: no signing material or env file is tracked."
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Flutter ${{ env.FLUTTER_VERSION }}
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Static analysis
+        run: flutter analyze
+
+      - name: Tests
+        run: flutter test
+
+  android:
+    name: Android release build (throwaway signing)
+    runs-on: ubuntu-latest
+    needs: quality
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Flutter ${{ env.FLUTTER_VERSION }}
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # CI keystore: single use. The values below are public and are not
+      # secrets. NEVER use this file or password for a build handed to users —
+      # the key is not stable across runs and is not stored anywhere.
+      # storeFile resolves relative to the Gradle project root (android/), so
+      # "keystore/..." means android/keystore/... — same as the local setup in
+      # docs/releasing.md.
+      - name: Create throwaway CI keystore
+        working-directory: android
+        run: |
+          mkdir -p keystore
+          keytool -genkeypair \
+            -keystore keystore/ci-throwaway.jks \
+            -storetype JKS \
+            -alias ci-throwaway \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 365 \
+            -storepass ci-throwaway \
+            -keypass ci-throwaway \
+            -dname "CN=Kecilin CI throwaway, OU=CI, O=Maleo Labs, C=ID"
+          {
+            echo "storeFile=keystore/ci-throwaway.jks"
+            echo "storePassword=ci-throwaway"
+            echo "keyAlias=ci-throwaway"
+            echo "keyPassword=ci-throwaway"
+          } > key.properties
+
+      - name: Build release APKs
+        run: flutter build apk --release --split-per-abi
+
+      - name: Build release app bundle
+        run: flutter build appbundle --release
+
+      # These artifacts are build proof only. The key differs every run, so they
+      # cannot update an existing install and must not be shared.
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: kecilin-ci-build-${{ github.run_number }}-${{ github.sha }}
+          path: |
+            build/app/outputs/flutter-apk/*.apk
+            build/app/outputs/bundle/release/*.aab
+          if-no-files-found: error
+          retention-days: 7

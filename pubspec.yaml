@@ -1,0 +1,47 @@
+name: kecilin
+description: "Kompres gambar & PDF secara lokal di perangkat."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # File selection and per-platform paths.
+  file_selector: ^1.1.0
+  path_provider: ^2.1.6
+
+  # Output handling: share sheet, "open with", and small local preferences.
+  share_plus: ^13.3.1
+  open_filex: ^5.0.0
+  shared_preferences: ^2.5.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # On-device tests that exercise the real Kotlin engines (see integration_test/).
+  integration_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/logo/
+
+  # Fixtures are synthesised by tool/test_fixtures.sh and are never shipped.
+  # To run the on-device suite, add `- integration_test/assets/` to the list
+  # above, run the tests, then delete the line again (see docs/development.md).
+
+  fonts:
+    - family: Plus Jakarta Sans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-Variable.ttf
+        - asset: assets/fonts/PlusJakartaSans-Italic-Variable.ttf
+          style: italic

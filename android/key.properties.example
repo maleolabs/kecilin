@@ -1,0 +1,12 @@
+# Template for android/key.properties — copy to android/key.properties and fill in.
+#
+# This template is committed; the real file is never committed (see .gitignore).
+#
+#   cp android/key.properties.example android/key.properties
+#   chmod 600 android/key.properties
+#
+# Paths are resolved relative to the android/ directory.
+storeFile=keystore/kecilin-release.jks
+storePassword=CHANGE_ME
+keyAlias=kecilin
+keyPassword=CHANGE_ME

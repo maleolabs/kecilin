@@ -1,0 +1,40 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    # Treat dead code and unused declarations as build failures rather than
+    # suggestions — they are exactly the kind of drift this codebase must not
+    # accumulate.
+    unused_import: error
+    unused_local_variable: error
+    unused_field: error
+    dead_code: error
+    invalid_annotation_target: ignore
+
+linter:
+  rules:
+    # Correctness
+    always_declare_return_types: true
+    avoid_print: true
+    avoid_empty_else: true
+    avoid_slow_async_io: true
+    cancel_subscriptions: true
+    close_sinks: true
+    only_throw_errors: true
+    throw_in_finally: true
+    unawaited_futures: true
+    unnecessary_statements: true
+
+    # Style / consistency
+    directives_ordering: true
+    prefer_single_quotes: true
+    prefer_final_locals: true
+    unnecessary_parenthesis: true
+    use_super_parameters: true
+
+# Rules intentionally left disabled:
+#   - public_member_api_docs: this is an application, not a published package.
+#   - lines_longer_than_80_chars: `dart format` owns line wrapping.
+#   - require_trailing_commas: would churn every file without a quality gain.
+#   - sort_constructors_first: `toJson` followed by its `fromJson` factory is
+#     the more readable order, and the rule rejects it.

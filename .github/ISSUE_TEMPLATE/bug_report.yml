@@ -1,0 +1,123 @@
+name: Bug report
+description: Report a crash, a wrong compression result, or broken UI.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Never attach a personal document.** Do not upload ID cards, passports,
+        bank statements, medical letters, or any file containing real identity
+        data. If you need a sample, use a synthetic file
+        (`tool/test_fixtures.sh`) or a blank scan.
+
+        Kecilin runs entirely on the device. If you see the app sending data to
+        the internet, that is a serious bug — describe it clearly under
+        "What actually happened".
+
+  - type: input
+    id: app-version
+    attributes:
+      label: App version
+      description: Settings → About.
+      placeholder: "1.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: android-version
+    attributes:
+      label: Android version
+      placeholder: "Android 14 (API 34)"
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: Device model
+      placeholder: "Samsung Galaxy A54"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: media-type
+    attributes:
+      label: File type
+      options:
+        - Image
+        - PDF
+        - Both
+    validations:
+      required: true
+
+  - type: input
+    id: input-size
+    attributes:
+      label: Input file size
+      description: An estimate is fine.
+      placeholder: "3.8 MB"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode used
+      options:
+        - Image — size target (100 KB / 200 KB / 500 KB / 1 MB / 2 MB)
+        - Image — fixed quality
+        - Image — near-lossless
+        - Image — resolution cap
+        - PDF — Light (text layer preserved)
+        - PDF — Aggressive (per-page raster)
+        - Other / not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the app, pick one 3.8 MB photo
+        2. Set the target to 200 KB
+        3. Tap Compress
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+      placeholder: "Output around 200 KB, quality still reasonable."
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What actually happened
+      description: Paste the exact error message if there is one. Do not paste document contents.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: original-preserved
+    attributes:
+      label: Was the original file left intact?
+      description: Kecilin must never overwrite the source file.
+      options:
+        - Yes, the original is intact
+        - No, the original changed or disappeared
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional information
+      description: UI screenshots are welcome. Screenshots of personal documents are not.
+    validations:
+      required: false

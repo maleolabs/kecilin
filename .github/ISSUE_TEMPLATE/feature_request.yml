@@ -1,0 +1,59 @@
+name: Feature request
+description: Propose a feature or a workflow improvement for Kecilin.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Kecilin is deliberately small: offline, no account, no server. Proposals
+        that add network dependencies, new permissions, or a backend are judged
+        against that standard.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Describe the situation, not the solution.
+      placeholder: "When compressing 20 photos I cannot see the expected total savings before starting."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Image compression
+        - PDF compression
+        - File picking / gallery
+        - History and storage
+        - UI / theme
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Include how other apps handle it, if relevant.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Constraints respected
+      options:
+        - label: This can work fully offline (no server, no account).
+          required: true
+        - label: This needs no new Android permission.
+          required: false

@@ -1,0 +1,4 @@
+# Blank issues are disabled so every report arrives with the context we need
+# (version, device, file type, mode). The two forms in this folder are the only
+# way in.
+blank_issues_enabled: false
