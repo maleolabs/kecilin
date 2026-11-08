@@ -6,6 +6,33 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-11-08
+
+### Added
+
+- First-launch welcome modal: short intro, core features, and the 100 % on-device
+  privacy statement. Shown once, dismiss-guarded.
+- "What's new" modal after a manual update, listing the user-facing changes for
+  the new version. Update detection is entirely local (stored seen-version
+  compared against the build version) — no network access, no new dependencies.
+
+### Changed
+
+- Refreshed visual design built on a glass design system: shared theme tokens
+  for derived text colours, soft containers, glass surfaces, radius, and motion
+  across every screen.
+- Restructured home screen: storage stats card with a savings chip and ratio
+  bar, always-visible quick-start pickers for images and PDFs, functional
+  history filter pills, per-row relative timestamps, and a privacy trust footer.
+- Compression results now record their finish time (backward-compatible JSON),
+  shown as relative timestamps in history rows.
+- Setup screen cross-fades its option blocks when the compression mode changes,
+  and its footer shows the total selected size.
+- Settings screen uses danger-styled destructive buttons and a shared confirm
+  dialog for file and history cleanup.
+- Gallery and file action sheets get a frosted glass backdrop, drag handle,
+  file header with a kind glyph, and haptic feedback.
+
 ## [1.0.0] — 2026-11-08
 
 First public release. Android only.
