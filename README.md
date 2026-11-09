@@ -59,7 +59,7 @@ no path for a document to leave the device even if a bug appears later.
 
 ## Screenshots
 
-<!-- Captured on a physical Galaxy A06 running Android 16. -->
+<!-- Captured on a physical Android 16 device; status and navigation bars cropped. -->
 
 | Home | Compression setup | Result |
 | --- | --- | --- |
@@ -71,7 +71,7 @@ no path for a document to leave the device even if a bug appears later.
 
 | Platform | Status |
 | --- | --- |
-| Android 7.0 (API 24) – Android 16 (API 36) | **Supported.** The release build was verified on a physical Galaxy A06 (Android 16, arm64-v8a); other API levels have not been device-tested |
+| Android 7.0 (API 24) – Android 16 (API 36) | **Supported.** The release build was verified on a physical device running Android 16 (arm64-v8a); other API levels have not been device-tested |
 | iOS | **Not implemented.** There is no `ios/` folder; scaffolding and verification require macOS + Xcode |
 
 Supported ABIs: `arm64-v8a`, `armeabi-v7a`, `x86_64` (emulator).

@@ -1,7 +1,7 @@
 # Kecilin — Performance & Artifact Report
 
 **Date:** 8 November 2026
-**Device:** Samsung SM-A065F (Galaxy A06), Android 16 / SDK 36, arm64-v8a, 720×1600
+**Device:** physical test device, Android 16 / SDK 36, arm64-v8a, 720×1600
 **Toolchain:** Flutter 3.38.5 (stable), Dart 3.10.4, JDK 21 (Android Studio JBR), Gradle 8.14, AGP per `android/`
 **Scope:** build artifact size, APK composition, on-device runtime for the release build.
 
@@ -131,7 +131,7 @@ stays sharp on every device the app supports. The re-encode is reproducible:
 
 ## 6. On-device runtime — release build
 
-Device: Galaxy A06, Android 16. Release APK (R8 on) installed via `adb install`.
+Device: physical device, Android 16. Release APK (R8 on) installed via `adb install`.
 
 ### 6.1 Start-up and footprint
 
